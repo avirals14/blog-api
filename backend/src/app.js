@@ -1,6 +1,8 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import postRoutes from "./routes/post.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 
 const app = express();
 
@@ -14,5 +16,13 @@ app.use(
         credentials:true,
     })
 );
+
+app.get("/", ()=>{
+    message:"API Running..."
+});
+
+// routes
+app.use("/api/auth", authRoutes);
+app.use("/api/posts", postRoutes);
 
 export default app;
