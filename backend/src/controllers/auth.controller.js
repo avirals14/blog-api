@@ -1,3 +1,4 @@
+import jwt from "jsonwebtoken";
 import UserModel from "../models/User.model.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
 
@@ -22,8 +23,8 @@ export const signup = async (req, res) => {
 
     const newUser = await UserModel.create({ name, email, password });
 
-    const accessToken = generateAccessToken(newUser._id);
-    const refreshToken = generateRefreshToken(newUser._id);
+    const accessToken = generateAccessToken(newUser);
+    const refreshToken = generateRefreshToken(newUser);
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
@@ -63,7 +64,10 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    console.log("[LOGIN] incoming payload:", { email, password: password ? "(provided)" : "(missing)" });
+    console.log("[LOGIN] incoming payload:", {
+      email,
+      password: password ? "(provided)" : "(missing)",
+    });
 
     if (!email || !password) {
       return res.status(400).json({
@@ -92,8 +96,8 @@ export const login = async (req, res) => {
       });
     }
 
-    const accessToken = generateAccessToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
@@ -168,10 +172,25 @@ export const refreshToken = async (req, res) => {
       });
     }
 
+    // verify refresh token
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-    const newAccessToken = generateAccessToken(decoded.userId);
+    // fetch user from DB
+    const user = await UserModel.findById(decoded.userId);
 
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User no longer exists",
+      });
+    }
+
+
+    // generate new access token
+    const newAccessToken = generateAccessToken(user);
+
+
+    // set cookie
     res.cookie("accessToken", newAccessToken, {
       httpOnly: true,
       sameSite: "strict",
